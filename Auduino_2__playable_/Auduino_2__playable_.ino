@@ -4,7 +4,7 @@
 // Help:      http://code.google.com/p/tinkerit/wiki/Auduino
 // More help: http://groups.google.com/group/auduino
 
-// modified by Joshua A.C. Newman http://glyphpress.com 
+// modified by Joshua A.C. Newman http://glyphpress.com
 // to add CV/Gate, reorganize the pins, add triggering, and add more explicit comments.
 // GitHub project: https://github.com/JoshuaACNewman/Auduino2
 //
@@ -59,7 +59,7 @@ boolean triggerGate;
 
 // Map Analogue channels
 #define SYNC_CONTROL         (0)  // BPM or pitch, depending on how high you turn it. 
-                                  // To control pitch with CV while using a tone-frequency Sync value, plug in here.
+// To control pitch with CV while using a tone-frequency Sync value, plug in here.
 
 #define GRAIN_FREQ_CONTROL   (1)  // Frequency of grain 1
 #define GRAIN_DECAY_CONTROL  (2)  // Decay rate of grain 1
@@ -75,73 +75,75 @@ boolean triggerGate;
 // Compile-time selectiopn of pins by µC/development board specs:
 // Changing these will also requires rewriting audioOn().
 
-#if defined(__AVR_ATmega8__)
 //
 // On old ATmega8 boards.
 //    Output is on pin 11
 //
-#define LED_PIN       13  // Use for outgoing Gate signal.
-#define LED_PORT      PORTB
-#define LED_BIT       5
-#define PWM_PIN       11
-#define PWM_VALUE     OCR2
-#define PWM_INTERRUPT TIMER2_OVF_vect
-#elif defined(__AVR_ATmega1280__)
-//
-// On the Arduino Mega
-//    Output is on pin 3
-//
-#define LED_PIN       13  // Use for outgoing Gate signal.
-#define LED_PORT      PORTB
-#define LED_BIT       7
-#define PWM_PIN       3
-#define PWM_VALUE     OCR3C
-#define PWM_INTERRUPT TIMER3_OVF_vect
-#else
-//
-// For modern ATmega168 and ATmega328 boards
-//    Output is on pin 3
-//
+/* #define LED_PIN       13  // Use for outgoing Gate signal. */
+/* #define LED_PORT      PORTB */
+/* #define LED_BIT       5 */
+/* #define PWM_PIN       11 */
+/* #define PWM_INTERRUPT TIMER2_OVF_vect */
+/* // */
+/* // On the Arduino Mega */
+/* //    Output is on pin 3 */
+/* // */
+/* #define LED_PIN       13  // Use for outgoing Gate signal. */
+/* #define LED_PORT      PORTB */
+/* #define LED_BIT       7 */
+/* #define PWM_PIN       3 */
+/* #define PWM_INTERRUPT TIMER3_OVF_vect */
+/* // */
+/* // For modern ATmega168 and ATmega328 boards */
+/* //    Output is on pin 3 */
+/* // */
+int OCR2B = 50;
 #define PWM_PIN       3
 #define PWM_VALUE     OCR2B
 #define LED_PIN       13  // Use for outgoing Gate signal.
 #define LED_PORT      PORTB
 #define LED_BIT       5
 #define PWM_INTERRUPT TIMER2_OVF_vect
-#endif
-
 /*  SYNC FREQUENCY MAPPING
- *  Select which mapping you use at runtime in grainBuild().
- *  Values sound like a beat under ~10, and tonal from about 10 up.
+    Select which mapping you use at runtime in grainBuild().
+    Values sound like a beat under ~10, and tonal from about 10 up.
 */
 
 // Smooth logarithmic mapping
 //
 uint16_t antilogTable[] = {
-  64830, 64132, 63441, 62757, 62081, 61413, 60751, 60097, 59449, 58809, 58176, 57549, 56929, 56316, 55709, 55109,
-  54515, 53928, 53347, 52773, 52204, 51642, 51085, 50535, 49991, 49452, 48920, 48393, 47871, 47356, 46846, 46341,
-  45842, 45348, 44859, 44376, 43898, 43425, 42958, 42495, 42037, 41584, 41136, 40693, 40255, 39821, 39392, 38968,
-  38548, 38133, 37722, 37316, 36914, 36516, 36123, 35734, 35349, 34968, 34591, 34219, 33850, 33486, 33125, 32768
+  0xfd3e, 0xfa84, 0xf7d1, 0xf525, 0xf281, 0xefe5, 0xed4f, 0xeac1, 0xe839, 0xe5b9,
+  0xe340, 0xe0cd, 0xde61, 0xdbfc, 0xd99d, 0xd745, 0xd4f3, 0xd2a8, 0xd063, 0xce25,
+  0xcbec, 0xc9ba, 0xc78d, 0xc567, 0xc347, 0xc12c, 0xbf18, 0xbd09, 0xbaff, 0xb8fc,
+  0xb6fe, 0xb505, 0xb312, 0xb124, 0xaf3b, 0xad58, 0xab7a, 0xa9a1, 0xa7ce, 0xa5ff,
+  0xa435, 0xa270, 0xa0b0, 0x9ef5, 0x9d3f, 0x9b8d, 0x99e0, 0x9838, 0x9694, 0x94f5,
+  0x935a, 0x91c4, 0x9032, 0x8ea4, 0x8d1b, 0x8b96, 0x8a15, 0x8898, 0x871f, 0x85ab,
+  0x843a, 0x82ce, 0x8165, 0x8000
 };
+
 uint16_t mapPhaseInc(uint16_t input) {
   return (antilogTable[input & 0x3f]) >> (input >> 6);
-}
+};
 
 // Stepped chromatic mapping
 //
 uint16_t midiTable[] = {
-  17, 18, 19, 20, 22, 23, 24, 26, 27, 29, 31, 32, 34, 36, 38, 41, 43, 46, 48, 51, 54, 58, 61, 65, 69, 73,
-  77, 82, 86, 92, 97, 103, 109, 115, 122, 129, 137, 145, 154, 163, 173, 183, 194, 206, 218, 231,
-  244, 259, 274, 291, 308, 326, 346, 366, 388, 411, 435, 461, 489, 518, 549, 581, 616, 652, 691,
-  732, 776, 822, 871, 923, 978, 1036, 1097, 1163, 1232, 1305, 1383, 1465, 1552, 1644, 1742,
-  1845, 1955, 2071, 2195, 2325, 2463, 2610, 2765, 2930, 3104, 3288, 3484, 3691, 3910, 4143,
-  4389, 4650, 4927, 5220, 5530, 5859, 6207, 6577, 6968, 7382, 7821, 8286, 8779, 9301, 9854,
-  10440, 11060, 11718, 12415, 13153, 13935, 14764, 15642, 16572, 17557, 18601, 19708, 20879,
-  22121, 23436, 24830, 26306
+  0x11, 0x12, 0x13, 0x14, 0x16, 0x17, 0x18, 0x1a, 0x1b, 0x1d, 0x1f, 0x20, 0x22,
+  0x24, 0x26, 0x29, 0x2b, 0x2e, 0x30, 0x33, 0x36, 0x3a, 0x3d, 0x41, 0x45, 0x49,
+  0x4d, 0x52, 0x56, 0x5c, 0x61, 0x67, 0x6d, 0x73, 0x7a, 0x81, 0x89, 0x91, 0x9a,
+  0xa3, 0xad, 0xb7, 0xc2, 0xce, 0xda, 0xe7, 0xf4, 0x103, 0x112, 0x123, 0x134,
+  0x146, 0x15a, 0x16e, 0x184, 0x19b, 0x1b3, 0x1cd, 0x1e9, 0x206, 0x225, 0x245,
+  0x268, 0x28c, 0x2b3, 0x2dc, 0x308, 0x336, 0x367, 0x39b, 0x3d2, 0x40c, 0x449,
+  0x48b, 0x4d0, 0x519, 0x567, 0x5b9, 0x610, 0x66c, 0x6ce, 0x735, 0x7a3, 0x817,
+  0x893, 0x915, 0x99f, 0xa32, 0xacd, 0xb72, 0xc20, 0xcd8, 0xd9c, 0xe6b, 0xf46,
+  0x102f, 0x1125, 0x122a, 0x133f, 0x1464, 0x159a, 0x16e3, 0x183f, 0x19b1, 0x1b38,
+  0x1cd6, 0x1e8d, 0x205e, 0x224b, 0x2455, 0x267e, 0x28c8, 0x2b34, 0x2dc6, 0x307f,
+  0x3361, 0x366f, 0x39ac, 0x3d1a, 0x40bc, 0x4495, 0x48a9, 0x4cfc, 0x518f, 0x5669,
+  0x5b8c, 0x60fe, 0x66c2
 };
 uint16_t mapMidi(uint16_t input) {
   return (midiTable[(1023 - input) >> 3]);
-}
+};
 
 // Stepped Pentatonic mapping
 //
@@ -154,7 +156,7 @@ uint16_t pentatonicTable[54] = {
 uint16_t mapPentatonic(uint16_t input) {
   uint8_t value = (1023 - input) / (1024 / 53);
   return (pentatonicTable[value]);
-}
+};
 
 // Fibonacci Sequence, low-frequency
 //
@@ -166,7 +168,7 @@ uint16_t fibonacciBeatTable[20] = {
 uint16_t mapFibonacciBeat(uint16_t input) {
   uint8_t value = (1023 - input) / (1024 / 20);
   return (fibonacciBeatTable[value]);
-}
+};
 
 // Linear, low-frequency, such as for danceable rhythms or an LFO.
 //
@@ -177,22 +179,22 @@ uint16_t bpmTable[16] = {
 uint16_t mapBPM(uint16_t input) {
   uint8_t value = (1023 - input) / (1024 / 16);
   return (bpmTable[value]);
-}
+};
 
 void audioOn() {
 #if defined(__AVR_ATmega8__)
   // ATmega8 has different registers
   TCCR2 = _BV(WGM20) | _BV(COM21) | _BV(CS20);
   TIMSK = _BV(TOIE2);
+  TCCR2A = _BV(COM2B1) | _BV(WGM20);
+  TCCR2B = _BV(CS20);
+  TIMSK2 = _BV(TOIE2);
 #elif defined(__AVR_ATmega1280__)
   TCCR3A = _BV(COM3C1) | _BV(WGM30);
   TCCR3B = _BV(CS30);
   TIMSK3 = _BV(TOIE3);
 #else
   // Set up PWM to 31.25kHz, phase accurate
-  TCCR2A = _BV(COM2B1) | _BV(WGM20);
-  TCCR2B = _BV(CS20);
-  TIMSK2 = _BV(TOIE2);
 #endif
 }
 
@@ -202,6 +204,9 @@ void setup() {
   audioOn();
   pinMode(LED_PIN, OUTPUT);
   pinMode(GATE_CONTROL, INPUT); // Use a pullup resistor to ground to clean the signal. Can't use INPUT_PULLUP because Gate is triggered with HIGH.
+  /* TCB2 = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20); */
+  /* TCB2 = _BV(CS22); */
+  /* OCR2A = 180; */
 }
 
 void loop() {
@@ -235,7 +240,7 @@ void grainStart () {
   grainAmp = 0x7fff;
   grain2PhaseAcc = 0;
   grain2Amp = 0x7fff;
-  LED_PORT ^= 1 << LED_BIT; // Faster than using digitalWrite. You can use this for a Gate signal.
+  LED_PORT = !1 << LED_BIT; // Faster than using digitalWrite. You can use this for a Gate signal.
 }
 
 void grainBuild () {
@@ -297,5 +302,5 @@ SIGNAL(PWM_INTERRUPT) {
 
   // Output to PWM (this is faster than using analogWrite)
   PWM_VALUE = output;
+  Serial.println(output);
 }
-
