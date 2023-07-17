@@ -103,7 +103,7 @@ int OCR2B = 50;
 #define LED_PIN       13  // Use for outgoing Gate signal.
 #define LED_PORT      PORTB
 #define LED_BIT       5
-#define PWM_INTERRUPT TIMER2_OVF_vect
+#define PWM_INTERRUPT __vector_TIMER2_OVF
 /*  SYNC FREQUENCY MAPPING
     Select which mapping you use at runtime in grainBuild().
     Values sound like a beat under ~10, and tonal from about 10 up.
@@ -161,7 +161,7 @@ uint16_t mapPentatonic(uint16_t input) {
 // Fibonacci Sequence, low-frequency
 //
 uint16_t fibonacciBeatTable[20] = {
-  1, 1, 2 , 3, 5, 8, 13, 21, 34, 55, 89, 144
+  1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144
 };
 
 
